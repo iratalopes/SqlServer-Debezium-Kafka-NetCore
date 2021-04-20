@@ -1,0 +1,87 @@
+version: '3.4'
+
+services:
+
+  mssql-server:
+    image: "mcr.microsoft.com/mssql/server:2019-latest"
+    environment:
+      ACCEPT_EULA: "Y"    
+      MSSQL_SA_PASSWORD: "P@ssw0rd"
+      MSSQL_COLLATION: "SQL_Latin1_General_CP1_CI_AS"
+      MSSQL_AGENT_ENABLED: "True"
+    ports:
+      - "1433:1433"
+    container_name: "mssql-server"
+    volumes:
+      - /c/docker/volumes/sqlserver/data:/var/opt/mssql/data
+      - /c/docker/volumes/sqlserver/log:/var/opt/mssql/log
+      - /c/docker/volumes/sqlserver/secrets:/var/opt/mssql/secrets
+    restart: always      
+    networks:
+      - advisor
+    
+  zookeeper:
+    image: "confluentinc/cp-zookeeper"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181    
+    ports: 
+      - "2181:2181"
+    container_name: "zookeeper"
+    restart: always      
+    networks:
+      - advisor  
+
+  kafka:
+    image: "confluentinc/cp-kafka"
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,CONNECTIONS_FROM_HOST://localhost:19092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONNECTIONS_FROM_HOST:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_LOG_CLEANER_DELETE_RETENTION_MS: 5000
+      KAFKA_BROKER_ID: 1
+      KAFKA_MIN_INSYNC_REPLICAS: 1      
+    ports: 
+      - "19092:19092"
+    depends_on:
+      - zookeeper
+    container_name: "kafka"
+    restart: always      
+    networks:
+      - advisor    
+
+  connect:
+    image: "debezium/connect"
+    environment:
+      GROUP_ID: 1
+      REST_ADVERTISED_HOST_NAME: "connect"
+      BOOTSTRAP_SERVERS: "kafka:9092"
+      ZOOKEEPER_CONNECT: "zookeeper:2181"
+      CONFIG_STORAGE_TOPIC: "my_connect_configs"
+      OFFSET_STORAGE_TOPIC: "my_connect_offsets" 
+      STATUS_STORAGE_TOPIC: "my_connect_statuses"
+    ports:
+      - "8083:8083"
+    depends_on:
+      - zookeeper
+      - kafka
+    container_name: "connect"
+    networks:
+      - advisor      
+
+  kafdrop:
+    image: "obsidiandynamics/kafdrop"
+    environment:
+      KAFKA_BROKERCONNECT: kafka:9092
+      JVM_OPTS: -Xms32M -Xmx64M
+    ports:
+      - 9005:9000
+    depends_on:
+      - kafka
+    container_name: "kafdrop"
+    networks:
+      - advisor
+  
+networks:
+  advisor:
+    driver: bridge
