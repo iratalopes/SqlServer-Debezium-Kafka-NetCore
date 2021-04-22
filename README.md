@@ -9,9 +9,11 @@ docker-compose up -d
 
 ## Executar os scripts de Banco de dados
 Acessar a base de dados connection string:
-`
-localhost,1433
-`
+```
+server:127.0.0.1,1433
+user:sa
+password:P@ssw0rd
+```
 - Executar o arquivo `create-database-advisor-legacy.sql` para criar a base de dados do legado.
 - Executar o arquivo `create-database-advisor-new.sql` para criar a base de dados nova. 
 - Executar o arquivo `enable-CDC-advisor-legancy.sql` para habilitar o CDC na base de dados do legado. 
@@ -39,7 +41,7 @@ curl --location --request POST 'http://localhost:8083/connectors' \
 ```
 Acessar o Kafdrop para visualizar os tópicos do Kafka: `http://localhost:9005`
 
-## Executar o consumero em .Net Core
+## Executar o consumer em .Net Core
 Executar o projeto `consumer.sln`. 
 
 ## Na prática
